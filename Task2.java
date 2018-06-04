@@ -1,0 +1,156 @@
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.*;
+
+class Task2 {
+
+	static List<Word> wordList = new ArrayList<Word>();
+
+	public static double cosineSim(double[] A, double[] B) {
+		if (A.length != B.length)
+			return 1;
+		double dotProduct = 0;
+		double ANorm = 0;
+		double BNorm = 0;
+		for (int i = 0; i < A.length; i++) {
+			dotProduct += A[i] * B[i];
+			ANorm += A[i] * A[i];
+			BNorm += B[i] * B[i];
+		}
+
+		double result = dotProduct / (Math.sqrt(ANorm) * Math.sqrt(BNorm));
+		return result;
+	}
+
+	public static Word findWord(String wordChosen) {
+		for (Word word : wordList) {
+			if (word.wordString.equals(wordChosen)) {
+				return word;
+			}
+		}
+		return null;
+	}
+
+	public static void main(String args[]) throws IOException {
+
+		int k = 5;// # of neighbors
+
+		// list to save similarity result
+		List<Result> resultList = new ArrayList<Result>();
+
+		// Load the input
+		// Open the file
+		FileInputStream fstream = new FileInputStream("src/glove.6B.300d.txt");
+		BufferedReader br = new BufferedReader(new InputStreamReader(fstream));
+
+		String strLine;
+		// Read File Line By Line
+		while ((strLine = br.readLine()) != null) {
+			String arr[] = strLine.split(" ", 2);
+			String firstWord = arr[0];
+			String numbers = arr[1];
+
+			String[] numbersSplit = numbers.split(" ");
+
+			double[] doubleValues = Arrays.stream(numbersSplit).mapToDouble(Double::parseDouble).toArray();
+
+			wordList.add(new Word(doubleValues, firstWord));
+		}
+
+		// Close the input stream
+		br.close();
+
+		// Sentence to find 5 nearest neighbors of:
+		String S_0 = "i love watching movies at night";
+
+		// split the sentence to words (tokenize):
+		String[] wordsSplit = S_0.split(" ");
+		int wordsFound = 0;
+		double[] query = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+		for (int j = 0; j < wordsSplit.length; j++) {
+
+			// check if words exist in data
+			Word queryWord = findWord(wordsSplit[j]);
+			if (queryWord == null) {
+				System.out.println("Word \"" + wordsSplit[j] + "\" is not in the data.");
+				continue;
+			} else {
+				System.out.println("Found word \"" + wordsSplit[j] + "\"");
+				wordsFound++;
+			}
+
+			// component-wise sum
+			for (int x = 0; x < 300; x++) {
+				query[x] += queryWord.vector[x];
+			}
+		}
+
+		// take the average
+
+		for (int y = 0; y < 300; y++) {
+			query[y] = query[y] / wordsFound;
+		}
+
+		// print the vector representation for the sentence:
+		System.out.println();
+		System.out.println("Vector representation of the sentence: " + Arrays.toString(query));
+		System.out.println();
+		// Find Similarities
+		for (Word word : wordList) {
+			double sim = cosineSim(word.vector, query);
+			resultList.add(new Result(sim, word.wordString));
+		}
+
+		Collections.sort(resultList, new SimComparator());
+		System.out.println();
+		System.out.println("5 Nearest Neighbors: ");
+		for (int x = 0; x < k; x++) {
+			System.out.println(resultList.get(x).word + ",\t\t Cosine similarity: " + resultList.get(x).sim);
+		}
+	}
+
+	static class Word {
+		double[] vector;
+		String wordString;
+
+		public Word(double[] vector, String wordString) {
+			this.wordString = wordString;
+			this.vector = vector;
+		}
+	}
+
+	// Modeling the results (similarity)
+	static class Result {
+		double sim;
+		String word;
+
+		public Result(double sim, String word) {
+			this.word = word;
+			this.sim = sim;
+		}
+	}
+
+	// Comparator for cosine similarity
+	static class SimComparator implements Comparator<Result> {
+		@Override
+		public int compare(Result a, Result b) {
+			if (a.sim < b.sim) {
+				return 1;
+			} else {
+				return -1;
+			}
+		}
+	}
+
+}
